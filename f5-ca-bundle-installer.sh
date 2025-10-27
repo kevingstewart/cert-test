@@ -6,7 +6,6 @@
 
 BUNDLE_NAME="f5-ca-bundle-new.crt"
 CERT_URL="https://raw.githubusercontent.com/kevingstewart/cert-test/refs/heads/main/updated-ca-bundle.crt"
-# CERT_URL="https://raw.githubusercontent.com/kevingstewart/cert-test/refs/heads/main/updated-ca-bundle-1.crt"
 
 
 ## Create/update f5-ca-bundle-new
