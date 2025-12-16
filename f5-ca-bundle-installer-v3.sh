@@ -1,10 +1,11 @@
 #!/bin/bash
 ## Author: kevin-at-f5-dot-com
-## Version: 20251216-1
+## Version: 20251216-2
 ## Installs a new curated F5 CA bundle on the BIG-IP
 
 BUNDLE_NAME="f5-ca-bundle-new.crt"
 CERT_URL="https://raw.githubusercontent.com/kevingstewart/cert-test/refs/heads/main/updated-ca-bundle.crt"
+HASH=5a062aa2c73be246f650dd0a48554a8beecc0ad1623d89132c132ba7585f0384
 
 ## Reporting function
 report() {
@@ -26,6 +27,7 @@ if [ "${interactive}" == 1 ]; then
     ## Ask user if they want the script to update any ca-bundle-manager objects using the old bundle
     answer=false && found=false
     echo -e "Do you wish for this script to adjust any CA Bundle Manager objects using the old F5 CA bundle?"
+    echo -e "Note: the default 'ca-bundle.crt' object cannot be modified."
     while true; do
         read -p "Type 'yes', 'no', or 'q' to quit: " yn
         case $yn in
@@ -45,21 +47,21 @@ report "${interactive}" "Starting"
 ## Fetch the new CA bundle file and store locally for validation testing
 curl -s "${CERT_URL}" -o "${BUNDLE_NAME}"
 
-## Count the number of certs in the bundle
+## TEST: Count the number of certs in the bundle. Verify that at least one certificate exists in the bundle, exit on validation failure
 certcount=$(grep -e "-----BEGIN CERTIFICATE-----" "${BUNDLE_NAME}" | wc -l)
-
-## Verify that at least one certificate exists in the bundle, clean up and exit if not
 if [ "$certcount" == 0 ]; then report "${interactive}" "CA bundle download failed, halting" && rm -f "$(pwd)/${BUNDLE_NAME}" && exit 1; fi
+
+## TEST: Calculate SHA256 hash on the downloaded CA bundle, exit on validation failure
+echo "${HASH} ${BUNDLE_NAME}" | sha256sum --check --status
+if [ $? -ne 0 ]; then report "${interactive}" "Checksum failed, halting" && rm -f "$(pwd)/${BUNDLE_NAME}" && exit 1; fi
 
 ## Loop through and verify all certs in the bundle, exit on any validation failures
 for index in $(seq 1 ${certcount}); do
     ## Separate each certificate
     tmpcert=$(awk "/-----BEGIN CERTIFICATE-----/{i++}i==$index" "${BUNDLE_NAME}")
     
-    ## Run openssl x509 on each certificate to get details, also checking for parsing errors
+    ## TEST: Run openssl x509 on each certificate to get details, also checking for parsing errors. Exit on validation failures
     certdata=$(echo "$tmpcert" | openssl x509 -noout -subject -issuer -enddate 2>&1)
-    
-    ## Test validation and clean up, report/exit
     if [ $? -ne 0 ]; then report "${interactive}" "Found certificate error, halting" && rm -f "$(pwd)/${BUNDLE_NAME}" && exit 1; fi
 done
       
