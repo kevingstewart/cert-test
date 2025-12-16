@@ -47,13 +47,13 @@ report "${interactive}" "Starting"
 ## Fetch the new CA bundle file and store locally for validation testing
 curl -s "${CERT_URL}" -o "${BUNDLE_NAME}"
 
-## TEST: Count the number of certs in the bundle. Verify that at least one certificate exists in the bundle, exit on validation failure
-certcount=$(grep -e "-----BEGIN CERTIFICATE-----" "${BUNDLE_NAME}" | wc -l)
-if [ "$certcount" == 0 ]; then report "${interactive}" "CA bundle download failed, halting" && rm -f "$(pwd)/${BUNDLE_NAME}" && exit 1; fi
-
 ## TEST: Calculate SHA256 hash on the downloaded CA bundle, exit on validation failure
 echo "${HASH} ${BUNDLE_NAME}" | sha256sum --check --status
 if [ $? -ne 0 ]; then report "${interactive}" "Checksum failed, halting" && rm -f "$(pwd)/${BUNDLE_NAME}" && exit 1; fi
+
+## TEST: Count the number of certs in the bundle. Verify that at least one certificate exists in the bundle, exit on validation failure
+certcount=$(grep -e "-----BEGIN CERTIFICATE-----" "${BUNDLE_NAME}" | wc -l)
+if [ "$certcount" == 0 ]; then report "${interactive}" "CA bundle download failed, halting" && rm -f "$(pwd)/${BUNDLE_NAME}" && exit 1; fi
 
 ## Loop through and verify all certs in the bundle, exit on any validation failures
 for index in $(seq 1 ${certcount}); do
